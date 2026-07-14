@@ -1,0 +1,66 @@
+name: Weekly Chef OSS report
+
+on:
+  schedule:
+    - cron: '15 9 * * 4'
+      timezone: America/Los_Angeles
+  workflow_dispatch:
+
+concurrency:
+  group: weekly-chef-oss-report
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.CHEF_OSS_STATS_GITHUB_TOKEN }}
+      TZ: America/Los_Angeles
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4'
+          bundler-cache: true
+
+      - name: Install ImageMagick
+        run: |
+          sudo apt-get update
+          sudo apt-get -y install imagemagick libmagickwand-dev
+
+      - name: Install oss-stats binstubs
+        run: bundle binstubs oss-stats
+
+      - name: Generate weekly reports
+        run: |
+          test -n "$GH_TOKEN"
+          ./scripts/run_all_weekly_reports.sh --yes
+
+      - name: Assemble Slack report
+        run: |
+          report_date="$(date +%F)"
+          ./scripts/assemble_slack_report.rb --date "$report_date" --output "slack_reports/$report_date.md"
+
+      - name: Commit and open or update weekly PR
+        run: |
+          report_date="$(date +%F)"
+          branch="automation/weekly-report-$report_date"
+          git checkout -B "$branch"
+          git add --all
+          if git diff --cached --quiet; then
+            echo "No weekly report changes to commit."
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit --signoff -m "Update weekly Chef OSS reports for $report_date"
+          git push --force-with-lease origin "HEAD:$branch"
+          if ! gh pr list --head "$branch" --base main --state open --json number --jq '.[0].number' | grep -q .; then
+            gh pr create --base main --head "$branch" --title "Weekly Chef OSS reports for $report_date" --body "Automated weekly report generation for $report_date."
+          fi
