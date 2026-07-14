@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 err() {
     echo "ERROR: $*"
 }
