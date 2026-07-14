@@ -2,7 +2,7 @@ name: Weekly Chef OSS report
 
 on:
   schedule:
-    - cron: '15 9 * * 4'
+    - cron: '15 8 * * 4'
       timezone: America/Los_Angeles
   workflow_dispatch:
 
