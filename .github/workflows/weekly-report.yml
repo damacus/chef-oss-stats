@@ -50,6 +50,7 @@ jobs:
       - name: Generate weekly reports
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           test -n "$GH_TOKEN"
           ./scripts/run_all_weekly_reports.sh --yes
