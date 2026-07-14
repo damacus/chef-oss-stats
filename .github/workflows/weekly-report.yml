@@ -51,8 +51,8 @@ jobs:
         run: |
           report_date="$(date +%F)"
           branch="automation/weekly-report-$report_date"
-          git checkout -B "$branch"
-          git add --all
+          git switch -c "$branch"
+          git add -- *_reports/*.md slack_reports/*.md team_slack_reports.md
           if git diff --cached --quiet; then
             echo "No weekly report changes to commit."
             exit 0
