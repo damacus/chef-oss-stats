@@ -10,18 +10,28 @@ concurrency:
   group: weekly-chef-oss-report
   cancel-in-progress: false
 
-permissions:
-  contents: write
-  pull-requests: write
+permissions: {}
 
 jobs:
   generate:
     runs-on: ubuntu-latest
     env:
-      GH_TOKEN: ${{ secrets.CHEF_OSS_STATS_GITHUB_TOKEN }}
       TZ: America/Los_Angeles
     steps:
+      - name: Generate PatchyMcBotFace token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1
+        id: app-token
+        with:
+          client-id: ${{ secrets.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_APP_PRIVATE_KEY }}
+          owner: damacus
+          repositories: chef-oss-stats
+          permission-contents: write
+          permission-pull-requests: write
+
       - uses: actions/checkout@v7
+        with:
+          token: ${{ steps.app-token.outputs.token }}
 
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
@@ -38,6 +48,8 @@ jobs:
         run: bundle binstubs oss-stats
 
       - name: Generate weekly reports
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           test -n "$GH_TOKEN"
           ./scripts/run_all_weekly_reports.sh --yes
@@ -48,6 +60,8 @@ jobs:
           ./scripts/assemble_slack_report.rb --date "$report_date" --output "slack_reports/$report_date.md"
 
       - name: Commit and open or update weekly PR
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           report_date="$(date +%F)"
           branch="automation/weekly-report-$report_date"
