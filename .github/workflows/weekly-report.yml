@@ -58,7 +58,7 @@ jobs:
       - name: Assemble Slack report
         run: |
           report_date="$(date +%F)"
-          ./scripts/assemble_slack_report.rb --date "$report_date" --output "slack_reports/$report_date.md"
+          bundle exec ./scripts/assemble_slack_report.rb --date "$report_date" --output "slack_reports/$report_date.md"
 
       - name: Commit and open or update weekly PR
         env:
